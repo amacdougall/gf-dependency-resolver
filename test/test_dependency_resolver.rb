@@ -131,8 +131,57 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
 
     [lasagna, sauce, tomato, onion, water, flour, egg].all? do |ingredient|
       assert @resolver.installed.include?(ingredient),
-        "DependencyResolver#install should install all dependencies: failed on #{ingredient.name}."
+        "DependencyResolver#install should install all dependencies: failed on #{ingredient.name}"
     end
     refute installed_list.include?(egg)
+  end
+
+  def test_simple_remove
+    @resolver.install("computer")
+    removed_list = @resolver.remove("computer")
+
+    assert @resolver.known.has_key?("computer")
+
+    computer = @resolver.known["computer"]
+
+    refute @resolver.installed.include?("computer"),
+      "DependencyResolver#remove should remove component from the installed list"
+    assert_equal [computer], removed_list,
+      "DependencyResolver#remove should return the removed component"
+  end
+
+  def test_remove_when_not_installed
+    assert_raises NotInstalledError do
+      @resolver.remove("computer")
+    end
+  end
+
+  def test_remove_required_dependency
+    @resolver.depend("computer", "ram")
+    @resolver.install("computer")
+
+    assert_raises RequiredDependencyError do
+      @resolver.remove("ram")
+    end
+  end
+
+  def test_remove_implicit_dependency
+    @resolver.depend("computer", "ram")
+    @resolver.install("computer")
+
+    ram = @resolver.known["ram"]
+
+    removed_list = @resolver.remove("computer")
+
+    refute @resolver.installed.include?(ram)
+    assert removed_list.include?(ram)
+  end
+
+  def test_list
+    @resolver.install("ram")
+    @resolver.install("hdd")
+
+    assert @resolver.list.map(&:name).include?("ram")
+    assert @resolver.list.map(&:name).include?("hdd")
   end
 end

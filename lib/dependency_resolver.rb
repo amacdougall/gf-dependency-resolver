@@ -77,5 +77,42 @@ class DependencyResolver
   # RequiredDependencyError.
   #
   def remove(name)
+    unless @known[name] && @installed.include?(@known[name])
+      raise NotInstalledError.new("#{name} is not installed.")
+    end
+
+    component = @known[name]
+
+    # raise if anything depends upon this component
+    if is_required(component)
+      raise RequiredDependencyError.new("#{name} is still needed.")
+    end
+
+    # otherwise, remove this component:
+    @installed.delete(component)
+    removed_list = [component]
+
+    # ...and any of its dependencies which are not required by anything else:
+    component.all_dependencies.reject {|c| is_required(c)}.each do |c|
+      unless c.explicit?
+        @installed.delete(c)
+        removed_list << c
+      end
+    end
+
+    removed_list
+  end
+
+  ##
+  # The list of installed Component instances.
+  #
+  def list
+    @installed
+  end
+
+  private
+
+  def is_required(component)
+    @installed.any? {|c| c.dependencies.include?(component)}
   end
 end
