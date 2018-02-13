@@ -1,0 +1,2 @@
+class AlreadyAddedError < StandardError
+end

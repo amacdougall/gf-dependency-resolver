@@ -9,7 +9,6 @@ require "set"
 #
 class Component
   attr_accessor :name, :dependencies, :explicit
-  attr_reader :all_dependencies
 
   def initialize(options)
     @name = options[:name]
@@ -26,5 +25,9 @@ class Component
   # Returns a unique array of both immediate and ancestor dependencies.
   def all_dependencies
     (self.dependencies.to_a + self.dependencies.map(&:all_dependencies)).flatten.uniq
+  end
+
+  def explicit?
+    @explicit
   end
 end
