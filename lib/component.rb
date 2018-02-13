@@ -30,4 +30,8 @@ class Component
   def explicit?
     @explicit
   end
+
+  def to_s
+    @name
+  end
 end

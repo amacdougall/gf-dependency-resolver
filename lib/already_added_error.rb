@@ -1,2 +1,0 @@
-class AlreadyAddedError < StandardError
-end

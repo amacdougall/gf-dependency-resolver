@@ -1,6 +1,6 @@
 require "set"
 require "./lib/component"
-require "./lib/already_added_error"
+require "./lib/errors"
 
 class DependencyResolver
   attr_accessor :known, :installed
@@ -15,10 +15,24 @@ class DependencyResolver
       @known[name] = Component.new(name: name)
     end
 
+    component = @known[name]
+
+    # Separating the create and depend steps so we can check for mutual
+    # dependencies among all deps first
     dependencies.each do |dep_name|
       unless @known.has_key? dep_name
         @known[dep_name] = Component.new(name: dep_name)
       end
+    end
+
+    dependencies.each do |dep_name|
+      dependency = @known[dep_name]
+      if dependency.dependencies.include?(component)
+        raise MutualDependencyError.new("#{dependency} depends on #{component}. Ignoring command.")
+      end
+    end
+
+    dependencies.each do |dep_name|
       @known[name].dependencies << @known[dep_name]
     end
   end
@@ -51,5 +65,17 @@ class DependencyResolver
     end
 
     newly_installed
+  end
+
+  ##
+  # Removes the component with the supplied name, and any of its implicit
+  # dependencies which are not supporting another component.
+  #
+  # If the component is not installed, raises NotInstalledError.
+  #
+  # If an installed component depends upon this component, raises
+  # RequiredDependencyError.
+  #
+  def remove(name)
   end
 end
