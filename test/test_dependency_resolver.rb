@@ -1,7 +1,7 @@
 require "minitest/autorun"
 require "./lib/component"
 require "./lib/dependency_resolver"
-require "./lib/already_added_error"
+require "./lib/errors"
 
 class TestDependencyResolver < MiniTest::Unit::TestCase
   def setup
@@ -19,6 +19,15 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
 
     assert computer.dependencies.include?(hdd), "Dependency was not added to component's dependencies."
   end
+
+  def test_mutual_dependency
+    # Fortunately, we aren't testing for cyclical dependencies.
+    @resolver.depend("computer", "hdd")
+    assert_raises MutualDependencyError do
+      @resolver.depend("hdd", "computer")
+    end
+  end
+
 
   def test_depend_with_several_args
     @resolver.depend("computer", "hdd", "ram")
@@ -78,6 +87,8 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
       "Installed list should include target component."
     assert installed_list.include?(ram),
       "Installed list should include dependency."
+    assert computer.explicit?
+    refute ram.explicit?
   end
 
   def test_install_list_when_dependency_already_satisfied
@@ -86,12 +97,15 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
     installed_list = @resolver.install("computer")
 
     computer = @resolver.known["computer"]
+    ram = @resolver.known["ram"]
 
     assert_equal [computer], installed_list,
       "Installed list should include only the target if its single dep was already satisfied."
+    assert computer.explicit?
+    assert ram.explicit?
   end
 
-  def test_redundant_install
+  def test_redundant_explicit_install
     @resolver.install("hdd")
     assert_raises AlreadyAddedError do
       @resolver.install("hdd")
@@ -104,9 +118,8 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
     @resolver.depend("pasta", "flour", "egg", "water")
     @resolver.depend("lasagna", "sauce", "pasta")
 
-    $magic = true
-    @resolver.install("lasagna")
-    $magic = false
+    @resolver.install("egg") # to prove it is not in the installed list
+    installed_list = @resolver.install("lasagna")
 
     lasagna = @resolver.known["lasagna"]
     sauce = @resolver.known["sauce"]
@@ -120,5 +133,6 @@ class TestDependencyResolver < MiniTest::Unit::TestCase
       assert @resolver.installed.include?(ingredient),
         "DependencyResolver#install should install all dependencies: failed on #{ingredient.name}."
     end
+    refute installed_list.include?(egg)
   end
 end
