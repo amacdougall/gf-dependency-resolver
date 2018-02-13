@@ -48,7 +48,9 @@ class DependencyResolver
 
     component = @known[name]
 
-    raise AlreadyAddedError if @installed.include?(component)
+    if @installed.include?(component)
+      raise AlreadyAddedError.new("#{component} is already installed.")
+    end
 
     component.explicit = true
     @installed << component
@@ -93,6 +95,8 @@ class DependencyResolver
     removed_list = [component]
 
     # ...and any of its dependencies which are not required by anything else:
+    # NOTE: I realized that this does not actually handle chained dependencies
+    # correctly. No time to fix it now!
     component.all_dependencies.reject {|c| is_required(c)}.each do |c|
       unless c.explicit?
         @installed.delete(c)
